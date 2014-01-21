@@ -1,97 +1,127 @@
 
-//I'm not sure what I want to do with my chart yet, but I know I want to draw one, so let's write some drawing code!
-//An ASCII Graph drawing object (characters/strings stored in a 2d array)
-function Graph(width, height) {
-	this.width = width;
-	this.height = height;
-	this.initGraph();
+
+var ASCIIDrawing = require('./asciidrawing.js');
+
+function Graph(spaceData) {
+	var width = 60;
+	var height = 20;
+	ASCIIDrawing.call(this, width, height);
+	this.spaceData = spaceData;
+	this.initGraph(spaceData);
 }
-//A few "static" variables
-Graph.BLANK = ' ';
-Graph.prototype.initGraph = function() {
-	console.log("Initializing a new graph:"+this.width + "," + this.height);
-	this.array = new Array(this.width);
-	for (var ii = 0; ii < this.array.length; ii++ ) {
-		this.array[ii] = new Array(this.height);
-		for (var jj = 0; jj < this.array[ii].length; jj++ ) {
-			this.array[ii][jj] = Graph.BLANK;
+//Inherit from ASCIIDrawing
+Graph.prototype = new ASCIIDrawing();
+//Correct constructor pointer
+ASCIIDrawing.prototype.constructor = Graph;
+
+// --- Graph variables ---
+Graph.prototype.title = "";
+Graph.prototype.xAxis_label = "Date";
+Graph.prototype.xAxis_units = "";
+Graph.prototype.xAxis_size = 60;
+Graph.prototype.yAxis_label = "";
+Graph.prototype.yAxis_units = "";
+Graph.prototype.yAxis_size = 20;
+
+Graph.prototype.graphPoints; //Points in the graph coordinate space (need to be transformed into the drawing space)
+
+
+
+// --- Graph functions --- 
+
+//Initialize the graph to the json data:
+Graph.prototype.initGraph = function () {
+	//At this point we're assuming the spaceData is valid Pulse space data.
+	console.log("ID: "+this.spaceData.id);
+	console.log("Label: "+this.spaceData.label);
+	console.log("Unit: "+this.spaceData.unit);
+	console.log("Quantity: "+this.spaceData.quantity);
+	console.log("resource: "+this.spaceData.resource);
+	console.log("start: "+this.spaceData.start);
+	console.log("end: "+this.spaceData.end);
+	console.log("data: "+this.spaceData.data);
+	
+	console.log("-------------------------");
+	//Iterate through everything in the object:
+	for ( var property in this.spaceData ) {
+		console.log(property+" = "+this.spaceData[property]);
+	}
+	
+	console.log("data.length: "+this.spaceData.data.length);
+	var data = this.spaceData.data;
+	var dataPoints = [];
+	var splitData;
+	for (var ii = 0; ii < data.length; ii++ ) {
+		console.log( data[ii] );
+		// splitData = data[ii].split(',');
+		// dataPoints[ii] = [splitData[0], splitData[1]];
+	}
+	
+	//We need to find the maximum and minimum of the data:
+	var dataMax = Number.MIN_VALUE;
+	var dataMin = Number.MAX_VALUE;
+	for (var ii = 0; ii < data.length; ii++ ) {
+		console.log("Investigating "+data[ii][1]);
+		if ( data[ii][1] < dataMin ) {
+			dataMin = data[ii][1];
+		}
+		if ( data[ii][1] > dataMax ) {
+			dataMax = data[ii][1];
 		}
 	}
-}
-Graph.prototype.toString = function () {
-	var string = "";
-	var ii = 0;
-	var jj = 0;
-	for (jj = 0; jj < this.height; jj++ ) {
-		for (ii = 0; ii < this.width; ii++ ) {
-			string += this.array[ii][jj];
-		}
-		string += '\n';
+	console.log("DATA MIN: "+dataMin+" DATA MAX: "+dataMax);
+	
+	
+	
+	
+	//Now all we need to do is map the data to the graph:
+	
+	
+	var graphAxisX = 1;
+	var graphAxisY = 19;
+	
+	//Plot the points:
+	var x = 0;
+	var y = 0;
+	var dataPoint;
+	for (var ii = 0; ii < data.length; ii++ ) {
+		x += 4;
+		dataPoint = Number(data[ii][1]);
+		dataPoint = (dataPoint/dataMax)*18;
+		console.log("DataPoint "+ii+": "+dataPoint);
+		y = Math.round(dataPoint);//Graph height
+		console.log("Y VALUE "+ii+": "+y);
+		y = 18 - y;
+		console.log("Marking data point "+data[ii][1]+" at "+x+","+y);
+		this.drawPoint(x, y, "*".yellow);
 	}
-	return string;
+	
+	
+	
+	
+	
+	this.drawPoint(0, 1, "@".green);
+	this.drawAxisAt(graphAxisX, graphAxisY);
+	this.drawLine( 2, 5, 10, 17, "#".red);
+	this.drawText(5, 19, "HELLO WORLD");
 }
-Graph.prototype.drawPoint = function ( x, y, character ) {
-	if ( x < 0 || x >= this.width || y < 0 || y >= this.height ) {
-		console.logError("Graph - drawPoint '"+x+","+y+"' is out of bounds");
-	}
-	console.log("Graph - drawPoint '"+x+","+y+"':");
-	this.array[x][y] = character;
+//Plot a point chart
+Graph.prototype.plotPointChart = function () {
+	
+	
+	
 }
-//Using Bresenham's algorithm
-Graph.prototype.drawLine = function ( x0, y0, x1, y1, character ) {
-/*
-function line(x0, y0, x1, y1)
-   dx := abs(x1-x0)
-   dy := abs(y1-y0) 
-   if x0 < x1 then sx := 1 else sx := -1
-   if y0 < y1 then sy := 1 else sy := -1
-   err := dx-dy
- 
-   loop
-     plot(x0,y0)
-     if x0 = x1 and y0 = y1 exit loop
-     e2 := 2*err
-     if e2 > -dy then 
-       err := err - dy
-       x0 := x0 + sx
-     end if
-     if x0 = x1 and y0 = y1 then 
-       plot(x0,y0)
-       exit loop
-     end if
-     if e2 <  dx then 
-       err := err + dx
-       y0 := y0 + sy 
-     end if
-   end loop
-*/
-	var dx = Math.abs(x1-x0);
-	var dy = Math.abs(y1-y0);
-	var sx = -1;
-	var sy = -1;
-	if ( x0 < x1 ) { sx = 1; }
-	if ( y0 < y1 ) { sy = 1; }
-	var err = dx-dy;
-	var e2;
-	while(true) {
-		this.drawPoint(x0, y0, character);
-		if ( x0 == x1 && y0 == y1 ) {
-			break;
-		}
-		e2 = 2*err;
-		if ( e2 > -dy ) {
-			err = err - dy;
-			x0 = x0 + sx;
-		}
-		if ( x0 == x1 ) {
-			this.drawPoint(x0, y0, character);
-			break;
-		}
-		if ( e2 < dx ) {
-			err = err + dx;
-			y0 = y0 + sy;
-		}
-	}
+
+
+
+Graph.prototype.drawAxisAt = function (ax, ay ) {
+	this.drawLine( ax, 0, ax, ay, "|" ); //Vertical line
+	this.drawLine( this.width-1, ay, ax, ay, "-" ); //Horizontal line
+	this.drawPoint( ax,ay, "+" ); //Meeting point
+	this.drawPoint( ax,0, "^" ); //Upper arrow
+	this.drawPoint( this.width-1,ay, ">" ); //Right arrow
 }
+
+
 
 module.exports = Graph;

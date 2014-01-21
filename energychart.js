@@ -17,11 +17,9 @@ console.log("Space ID:",spaceId);
 
 
 function drawGraph(jsonData) {
-	var graph = new Graph(20, 20);
-	graph.drawPoint(0, 1, "@".green);
-	console.log("Graph:\n"+graph.toString());
-	graph.drawLine( 1, 5, 10, 17, "#".red);
+	var graph = new Graph(jsonData);
 	console.log("Graph: \n"+graph.toString());
+	graph.plotPointChart();
 	
 }
 
@@ -47,5 +45,5 @@ function readSampleData(error, data) {
 
 
 
-// fs.readFile("sampleData.txt", readSampleData);
-drawGraph(null);
+fs.readFile("sampleData.txt", readSampleData);
+// drawGraph(null);
