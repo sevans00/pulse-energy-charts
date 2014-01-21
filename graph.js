@@ -3,26 +3,31 @@
 var ASCIIDrawing = require('./asciidrawing.js');
 
 function Graph(spaceData) {
-	var width = 60;
-	var height = 20;
-	ASCIIDrawing.call(this, width, height);
 	this.spaceData = spaceData;
 	this.initGraph(spaceData);
 }
-//Inherit from ASCIIDrawing
-Graph.prototype = new ASCIIDrawing();
-//Correct constructor pointer
-ASCIIDrawing.prototype.constructor = Graph;
+
+
 
 // --- Graph variables ---
-Graph.prototype.title = "";
+Graph.prototype.asciiDrawing;
+
+Graph.prototype.title = "Energy usage";
+Graph.prototype.subtitle = "";
 Graph.prototype.xAxis_label = "Date";
 Graph.prototype.xAxis_units = "";
-Graph.prototype.xAxis_size = 60;
+Graph.prototype.xAxis_size = 42;
+Graph.prototype.xAxis_origin = 10;
 Graph.prototype.yAxis_label = "";
-Graph.prototype.yAxis_units = "";
+Graph.prototype.yAxis_units = "kWh";
 Graph.prototype.yAxis_size = 20;
+Graph.prototype.yAxis_origin = 25;
 
+Graph.prototype.dataMax;
+Graph.prototype.dataMin;
+
+Graph.prototype.fullScale = true; //if true, max is 1, min is 0, otherwise min is the minimum value
+Graph.prototype.normalizedPoints; //Points from 0-1, where 1 is max
 Graph.prototype.graphPoints; //Points in the graph coordinate space (need to be transformed into the drawing space)
 
 
@@ -32,36 +37,22 @@ Graph.prototype.graphPoints; //Points in the graph coordinate space (need to be 
 //Initialize the graph to the json data:
 Graph.prototype.initGraph = function () {
 	//At this point we're assuming the spaceData is valid Pulse space data.
-	console.log("ID: "+this.spaceData.id);
-	console.log("Label: "+this.spaceData.label);
-	console.log("Unit: "+this.spaceData.unit);
-	console.log("Quantity: "+this.spaceData.quantity);
-	console.log("resource: "+this.spaceData.resource);
-	console.log("start: "+this.spaceData.start);
-	console.log("end: "+this.spaceData.end);
-	console.log("data: "+this.spaceData.data);
+	this.yAxis_label = this.spaceData.unit;
+	this.title = this.spaceData.label + " (" + this.spaceData.id + ")";
+	this.subtitle = this.spaceData.start.split("T")[0] +" "+ this.spaceData.start.split("T")[1].split("-")[1];
+	this.subtitle +=" - "
+	this.subtitle += this.spaceData.end.split("T")[0] +" "+ this.spaceData.end.split("T")[1].split("-")[1];
 	
-	console.log("-------------------------");
-	//Iterate through everything in the object:
-	for ( var property in this.spaceData ) {
-		console.log(property+" = "+this.spaceData[property]);
-	}
-	
-	console.log("data.length: "+this.spaceData.data.length);
+	//Initialize the graph's data:
 	var data = this.spaceData.data;
-	var dataPoints = [];
-	var splitData;
-	for (var ii = 0; ii < data.length; ii++ ) {
-		console.log( data[ii] );
-		// splitData = data[ii].split(',');
-		// dataPoints[ii] = [splitData[0], splitData[1]];
-	}
+	//Decide on the size of the graph:
+	this.xAxis_size = data.length * ( 5 ) + 2;
 	
 	//We need to find the maximum and minimum of the data:
 	var dataMax = Number.MIN_VALUE;
 	var dataMin = Number.MAX_VALUE;
 	for (var ii = 0; ii < data.length; ii++ ) {
-		console.log("Investigating "+data[ii][1]);
+		// console.log("Investigating "+data[ii][1]);
 		if ( data[ii][1] < dataMin ) {
 			dataMin = data[ii][1];
 		}
@@ -69,57 +60,169 @@ Graph.prototype.initGraph = function () {
 			dataMax = data[ii][1];
 		}
 	}
-	console.log("DATA MIN: "+dataMin+" DATA MAX: "+dataMax);
+	this.dataMax = dataMax;
+	this.dataMin = dataMin;
+	// console.log("DATA MIN: "+dataMin+" DATA MAX: "+dataMax);
 	
-	
-	
-	
-	//Now all we need to do is map the data to the graph:
-	
-	
-	var graphAxisX = 1;
-	var graphAxisY = 19;
-	
-	//Plot the points:
-	var x = 0;
-	var y = 0;
-	var dataPoint;
+	//Compute normalizedPoints
+	this.normalizedPoints = [];
 	for (var ii = 0; ii < data.length; ii++ ) {
-		x += 4;
-		dataPoint = Number(data[ii][1]);
-		dataPoint = (dataPoint/dataMax)*18;
-		console.log("DataPoint "+ii+": "+dataPoint);
-		y = Math.round(dataPoint);//Graph height
-		console.log("Y VALUE "+ii+": "+y);
-		y = 18 - y;
-		console.log("Marking data point "+data[ii][1]+" at "+x+","+y);
-		this.drawPoint(x, y, "*".yellow);
+		if ( this.fullScale ) {
+			this.normalizedPoints.push( data[ii][1] / dataMax );
+		} else {
+			this.normalizedPoints.push( (data[ii][1] - dataMin ) / (dataMax - dataMin ) );
+		}
+	}
+}
+//
+//Draw Chart Basics:
+Graph.prototype.drawChartBasics = function () {
+	var drawingWidth = this.xAxis_size + this.xAxis_origin + 2;
+	var drawingHeight = this.yAxis_origin + 2 + 1;
+	this.asciiDrawing = new ASCIIDrawing(drawingWidth, drawingHeight);
+	
+	this.drawAxis();
+	
+	//Common variables:
+	var x,y;
+	
+	//Draw X axis Labels
+	var graph = this;
+	var yValue = this.yAxis_origin + 1;
+	//Bit of a hack to get some quick time labels into our chart
+	function drawXAxisTimePoint ( x, y, ii ) {
+		graph.asciiDrawing.drawText(x, yValue, graph.getTimeStringAt(ii));
+	}
+	this.plotChart(drawXAxisTimePoint);
+	
+	//Draw Y axis labels
+	var yAxisLabelWidth = this.xAxis_origin-2;
+	var numYLabels = 10;
+	var value;
+	var string;
+	for ( var ii = 0; ii <= numYLabels; ii++ ) {
+		y = this.yAxis_origin - Math.round(ii/numYLabels *this.yAxis_size);
+		if ( this.fullScale ) {
+			value = Math.round( this.dataMax * (ii/numYLabels) );
+		} else {
+			value = Math.round( (this.dataMax * (ii/numYLabels) ) + (this.dataMin*(1-ii/numYLabels)) );
+		}
+		string = ""+value;
+		x = this.xAxis_origin - string.length;
+		this.asciiDrawing.drawText(x, y, string);
 	}
 	
+	//Draw title
+	x = this.xAxis_origin + (this.xAxis_size + 1 - this.title.length ) / 2;
+	x = Math.round(x);
+	y = 0;
+	this.asciiDrawing.drawText(x, y, this.title);
+	//Subtitle
+	x = this.xAxis_origin + (this.xAxis_size + 1 - this.subtitle.length ) / 2;
+	x = Math.round(x);
+	y = 1;
+	this.asciiDrawing.drawText(x, y, this.subtitle);
+	//X axis label
+	// x = this.xAxis_origin + (this.xAxis_size + 1 - this.xAxis_label.length ) / 2;
+	// y = this.yAxis_origin + 3;
+	// this.asciiDrawing.drawText(x, y, this.xAxis_label);
+	//Draw yAxis_units
+	x = this.xAxis_origin - 4;
+	y = this.yAxis_origin - this.yAxis_size - 2;
+	this.asciiDrawing.drawText(x, y, this.yAxis_units);
 	
+}
+Graph.prototype.getTimeStringAt = function ( ii ) {
+	var string = this.spaceData.data[ii][0];
+	string = string.split("T")[0].split("-")[2];
+	return string;
+}
+
+
+
+//Plot a bar chart
+Graph.prototype.plotBarChart = function () {
+	this.drawChartBasics();
+	//Closure to draw a type of graph:
+	var graph = this;
+	function drawingFunction ( x, y ) {
+		// console.log("Graph - drawPoint '"+x+","+y+"':");
+		if ( y < graph.yAxis_origin-1 ) {
+			graph.asciiDrawing.drawLine(x, y, x, graph.yAxis_origin, '#'.red);
+		} else {
+			graph.asciiDrawing.drawPoint(x, y, '#'.red);
+		}
+	}
 	
-	
-	
-	this.drawPoint(0, 1, "@".green);
-	this.drawAxisAt(graphAxisX, graphAxisY);
-	this.drawLine( 2, 5, 10, 17, "#".red);
-	this.drawText(5, 19, "HELLO WORLD");
+	this.plotChart(drawingFunction);
+}
+//Plot a line chart
+Graph.prototype.plotLineChart = function () {
+	this.drawChartBasics();
+	//Closure to draw a type of graph:
+	var graph = this;
+	var prevX;
+	var prevY;
+	function drawingFunction ( x, y, ii ) {
+		if ( ii != 0 ) {
+			graph.asciiDrawing.drawLine(x, y, prevX, prevY, '.'.yellow);
+			graph.asciiDrawing.drawPoint(prevX, prevY, '#');//Need to draw over it again
+		}
+		prevX = x;
+		prevY = y;
+		if ( y < graph.yAxis_origin-1 ) {
+			graph.asciiDrawing.drawLine(x, y, x, graph.yAxis_origin-1, '|'.red);
+		}
+		graph.asciiDrawing.drawPoint(x, y, '#');
+	}
+	this.plotChart(drawingFunction);
 }
 //Plot a point chart
 Graph.prototype.plotPointChart = function () {
+	this.drawChartBasics();
+	//Closure to draw a type of graph:
+	var graph = this;
+	function drawingFunction ( x, y ) {
+		// console.log("Graph - drawPoint '"+x+","+y+"':");
+		graph.asciiDrawing.drawPoint(x, y, '*'.yellow);
+	}
 	
-	
-	
+	this.plotChart(drawingFunction);
+}
+
+//Plot a chart using a drawing function.  Drawing function can take in up to three arguments ( x, y, and index )
+Graph.prototype.plotChart = function ( drawingFunction ) {
+	var xAxisSpacing = Math.round ( (this.xAxis_size-2) / this.normalizedPoints.length );
+	var x = this.xAxis_origin+1;
+	var xStart = this.xAxis_origin+1 + Math.round(xAxisSpacing/2);
+	var y = this.yAxis_origin+1;
+	for (var ii = 0; ii < this.normalizedPoints.length; ii++ ) {
+		// x = ii * xAxisSpacing + this.xAxis_origin + 1;
+		x = ii * xAxisSpacing + xStart;
+		y = Math.round( this.normalizedPoints[ii] * this.yAxis_size );
+		y = this.yAxis_origin - y;
+		drawingFunction(x, y, ii);
+	}
+}
+Graph.prototype.display = function() {
+	console.log(this.toString());
+}
+Graph.prototype.toString = function () {
+	return this.asciiDrawing.toString();
 }
 
 
 
-Graph.prototype.drawAxisAt = function (ax, ay ) {
-	this.drawLine( ax, 0, ax, ay, "|" ); //Vertical line
-	this.drawLine( this.width-1, ay, ax, ay, "-" ); //Horizontal line
-	this.drawPoint( ax,ay, "+" ); //Meeting point
-	this.drawPoint( ax,0, "^" ); //Upper arrow
-	this.drawPoint( this.width-1,ay, ">" ); //Right arrow
+Graph.prototype.drawAxis = function ( ) {
+	var ax = this.xAxis_origin;
+	var ax_end = this.xAxis_origin + this.xAxis_size;
+	var ay = this.yAxis_origin;
+	var ay_end = this.yAxis_origin - this.yAxis_size - 1;//The -1 is there to give us the point on top of the graph
+	this.asciiDrawing.drawLine( ax, ay, ax_end, ay, "-" ); //Horizontal line
+	this.asciiDrawing.drawLine( ax, ay, ax, ay_end, "|" ); //Vertical line
+	this.asciiDrawing.drawPoint( ax,ay, "+" ); //Meeting point
+	this.asciiDrawing.drawPoint( ax,ay_end, "^" ); //Upper arrow
+	this.asciiDrawing.drawPoint( ax_end,ay, ">" ); //Right arrow
 }
 
 

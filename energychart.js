@@ -18,28 +18,27 @@ console.log("Space ID:",spaceId);
 
 function drawGraph(jsonData) {
 	var graph = new Graph(jsonData);
-	console.log("Graph: \n"+graph.toString());
-	graph.plotPointChart();
+	// graph.plotPointChart();
+	graph.plotBarChart();
+	// graph.plotLineChart();
+	graph.display();
 	
 }
 
 
 //Read in some data, convert to JSON, print it out, for great justice
 function readSampleData(error, data) {
-	console.log("Error:",error);
-	console.log("Contents of sample:",data);
+	if ( error ) {
+		console.log("Error:",error);
+		return;
+	}
+	// console.log("Contents of sample:",data);
 	var jsonData = JSON.parse(data);
-	console.log("JSON Data:",jsonData);
+	// console.log("JSON Data:",jsonData);
 	//Now we need to plot it:
-	
-	//Colors!  Yay!
-	console.log("asdf".green,"fdsa".red);
-	//Char code Graphics?
-	// for (var ii = 0; ii < 500; ii++ ) {
-		// console.log( ii+" = '" + String.fromCharCode(ii) + "'" );
-	// }
-	console.log("Draw a graph");
+	// console.log("Draw a graph");
 	drawGraph(jsonData);
+	
 }
 
 

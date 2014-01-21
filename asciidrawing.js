@@ -1,6 +1,6 @@
 
 //I'm not sure what I want to do with my chart yet, but I know I want to draw one, so let's write some drawing code!
-//An ASCII Graph drawing object (characters/strings stored in a 2d array)
+//An ASCII Drawing drawing object (characters/strings stored in a 2d array)
 function ASCIIDrawing(width, height) {
 	this.width = width;
 	this.height = height;
@@ -9,7 +9,7 @@ function ASCIIDrawing(width, height) {
 //A few "static" variables
 ASCIIDrawing.BLANK = ' ';
 ASCIIDrawing.prototype.initDrawing = function() {
-	console.log("Initializing a new graph:"+this.width + "," + this.height);
+	// console.log("Initializing a new drawing:"+this.width + "," + this.height);
 	this.array = new Array(this.width);
 	for (var ii = 0; ii < this.array.length; ii++ ) {
 		this.array[ii] = new Array(this.height);
@@ -38,7 +38,7 @@ ASCIIDrawing.prototype.drawAxisAt = function (ax, ay ) {
 	this.drawPoint( this.width-1,ay, ">" ); //Right arrow
 }
 ASCIIDrawing.prototype.drawText = function ( x, y, text ) {
-	//console.log("Graph - drawText: "+text + " at ("+x+","+y+")");
+	//console.log("drawing - drawText: "+text + " at ("+x+","+y+")");
 	for (var ii = 0; ii < text.length; ii++ ) {
 		if ( x >= this.width ) {
 			break;
@@ -49,9 +49,9 @@ ASCIIDrawing.prototype.drawText = function ( x, y, text ) {
 }
 ASCIIDrawing.prototype.drawPoint = function ( x, y, character ) {
 	if ( x < 0 || x >= this.width || y < 0 || y >= this.height ) {
-		console.error("Graph - drawPoint '"+x+","+y+"' is out of bounds");
+		console.error("drawing - drawPoint '"+x+","+y+"' is out of bounds");
 	}
-	// console.log("Graph - drawPoint '"+x+","+y+"':");
+	// console.log("drawing - drawPoint '"+x+","+y+"':");
 	this.array[x][y] = character;
 }
 //Uses Bresenham's algorithm to draw a line
