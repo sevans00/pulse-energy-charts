@@ -35,36 +35,70 @@ function drawGraph(jsonData) {
 	console.log("Total: "+jsonData.sum+" "+jsonData.unit);
 }
 
+//HTTP request to get the data for the given space id
+function getSpaceIdData () {
+	//Data HTTP request Setup:
+	var options = {
+		host: 'api.pulseenergy.com',
+		path: '/pulse/1/spaces/'+spaceId+'/data.json?resource=Total&interval=Week&quantity=Energy&key='+apiKey
+	};
+	var callback = function(response) {
+		var data = '';
+		response.on('error', function(e) {
+			console.log("HTTP Error: " + e.message);
+		});
+		response.on('data', function (chunk) {
+			data += chunk;
+		});
+		response.on('end', function () {
+			var jsonData;
+			// console.log('END!');
+			// console.log(data);
+			//Some quick error checking:
+			try {
+				jsonData = JSON.parse(data);
+				drawGraph(jsonData);	
+			} catch (e) {
+				console.error("Error: "+e);
+			}
+		});
+	};
+	http.get(options, callback);
+}
 
-
-//Data HTTP request Setup:
-var options = {
-	host: 'api.pulseenergy.com',
-	path: '/pulse/1/spaces/'+spaceId+'/data.json?resource=Total&interval=Week&quantity=Energy&key='+apiKey
-};
-var callback = function(response) {
-	var data = '';
-	response.on('error', function(e) {
-		console.log("HTTP Error: " + e.message);
-	});
-	response.on('data', function (chunk) {
-		data += chunk;
-	});
-	response.on('end', function () {
-		var jsonData;
-		// console.log('END!');
-		// console.log(string);
-		//Some quick error checking:
-		try {
+//HTTP request to get the valid space ids
+function getValidSpaceIds () {
+	//Data HTTP request Setup:
+	var options = {
+		host: 'api.pulseenergy.com',
+		path: '/pulse/1/spaces.json?key='+apiKey
+	};
+	var callback = function(response) {
+		var data = '';
+		response.on('error', function(e) {
+			console.log("HTTP Error: " + e.message);
+		});
+		response.on('data', function (chunk) {
+			data += chunk;
+		});
+		response.on('end', function () {
+			var jsonData;
+			// console.log('END!');
+			// console.log(data);
 			jsonData = JSON.parse(data);
-			drawGraph(jsonData);	
-		} catch (e) {
-			console.log("Error: "+e);
-			console.log("Are you sure the space id is correct?");
-		}
-	});
-};
-http.get(options, callback);
+			for (var ii in jsonData){
+				// console.log("Space:"+jsonData[ii]);
+				if ( jsonData[ii].id == spaceId ) {
+					// console.log("Valid spaceID");
+					return getSpaceIdData();
+				}
+			}
+			console.error("Error: Space ID not found for this key.");
+		});
+	};
+	http.get(options, callback);
+}
+getValidSpaceIds();
 
 
 
