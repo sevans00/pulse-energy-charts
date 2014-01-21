@@ -20,7 +20,7 @@ Additional options
 ------------------
 
 node energychart.js [spaceId] -graphType
- * -graphType optional parameter can be one of
- ** -pp Draws a point graph
- ** -pb Draws a bar graph
- ** -pl Draws a line graph
+  -graphType optional parameter can be one of
+ * -pp Draws a point graph
+ * -pb Draws a bar graph
+ * -pl Draws a line graph
