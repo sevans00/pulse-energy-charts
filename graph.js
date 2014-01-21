@@ -14,7 +14,7 @@ Graph.prototype.asciiDrawing;
 
 Graph.prototype.title = "Energy usage";
 Graph.prototype.subtitle = "";
-Graph.prototype.xAxis_label = "Date";
+Graph.prototype.xAxis_label = "Time";
 Graph.prototype.xAxis_units = "";
 Graph.prototype.xAxis_size = 42;
 Graph.prototype.xAxis_origin = 10;
@@ -26,7 +26,9 @@ Graph.prototype.yAxis_origin = 25;
 Graph.prototype.dataMax;
 Graph.prototype.dataMin;
 
-Graph.prototype.fullScale = true; //if true, max is 1, min is 0, otherwise min is the minimum value
+Graph.prototype.xAxis_fullTimeLabels = true; //if true, display the full date on the x axis
+
+Graph.prototype.fullScale = true; //if true, graph max is 1, min is 0, otherwise min is the minimum value
 Graph.prototype.normalizedPoints; //Points from 0-1, where 1 is max
 Graph.prototype.graphPoints; //Points in the graph coordinate space (need to be transformed into the drawing space)
 
@@ -47,6 +49,9 @@ Graph.prototype.initGraph = function () {
 	var data = this.spaceData.data;
 	//Decide on the size of the graph:
 	this.xAxis_size = data.length * ( 5 ) + 2;
+	if ( this.xAxis_fullTimeLabels ) {
+		this.xAxis_size = data.length * ( 6 ) + 2; //Need a bit extra for the times
+	}
 	
 	//We need to find the maximum and minimum of the data:
 	var dataMax = Number.MIN_VALUE;
@@ -75,10 +80,13 @@ Graph.prototype.initGraph = function () {
 	}
 }
 //
-//Draw Chart Basics:
+//Draw Chart Basics, axis, labels, title, etc.
 Graph.prototype.drawChartBasics = function () {
 	var drawingWidth = this.xAxis_size + this.xAxis_origin + 2;
-	var drawingHeight = this.yAxis_origin + 2 + 1;
+	var drawingHeight = this.yAxis_origin + 3;
+	if ( this.xAxis_fullTimeLabels ) {
+		drawingHeight += 5; //Account for the extra space the labels take up
+	}
 	this.asciiDrawing = new ASCIIDrawing(drawingWidth, drawingHeight);
 	
 	this.drawAxis();
@@ -91,7 +99,16 @@ Graph.prototype.drawChartBasics = function () {
 	var yValue = this.yAxis_origin + 1;
 	//Bit of a hack to get some quick time labels into our chart
 	function drawXAxisTimePoint ( x, y, ii ) {
-		graph.asciiDrawing.drawText(x, yValue, graph.getTimeStringAt(ii));
+		if ( graph.xAxis_fullTimeLabels ) {
+			var string = graph.spaceData.data[ii][0];
+			var strings = string.split("T")[0].split("-");
+			strings = strings.concat(string.split("T")[1].split("-")[1] );
+			for (var jj = 0; jj < strings.length; jj++ ) {
+				graph.asciiDrawing.drawText(x, yValue+jj, strings[jj]);
+			}
+		} else {
+			graph.asciiDrawing.drawText(x, yValue, graph.getTimeStringAt(ii));
+		}
 	}
 	this.plotChart(drawXAxisTimePoint);
 	
@@ -123,9 +140,9 @@ Graph.prototype.drawChartBasics = function () {
 	y = 1;
 	this.asciiDrawing.drawText(x, y, this.subtitle);
 	//X axis label
-	// x = this.xAxis_origin + (this.xAxis_size + 1 - this.xAxis_label.length ) / 2;
-	// y = this.yAxis_origin + 3;
-	// this.asciiDrawing.drawText(x, y, this.xAxis_label);
+	x = this.xAxis_origin + Math.round((this.xAxis_size + 1 - this.xAxis_label.length ) / 2);
+	y = this.asciiDrawing.height - 1;
+	this.asciiDrawing.drawText(x, y, this.xAxis_label); //Date
 	//Draw yAxis_units
 	x = this.xAxis_origin - 4;
 	y = this.yAxis_origin - this.yAxis_size - 2;
@@ -140,20 +157,24 @@ Graph.prototype.getTimeStringAt = function ( ii ) {
 
 
 
+
+
+
+
 //Plot a bar chart
 Graph.prototype.plotBarChart = function () {
+	var barChartSymbol = '#'.green;
 	this.drawChartBasics();
 	//Closure to draw a type of graph:
 	var graph = this;
 	function drawingFunction ( x, y ) {
 		// console.log("Graph - drawPoint '"+x+","+y+"':");
 		if ( y < graph.yAxis_origin-1 ) {
-			graph.asciiDrawing.drawLine(x, y, x, graph.yAxis_origin, '#'.red);
+			graph.asciiDrawing.drawLine(x, y, x, graph.yAxis_origin, barChartSymbol);
 		} else {
-			graph.asciiDrawing.drawPoint(x, y, '#'.red);
+			graph.asciiDrawing.drawPoint(x, y, barChartSymbol);
 		}
 	}
-	
 	this.plotChart(drawingFunction);
 }
 //Plot a line chart
@@ -186,9 +207,15 @@ Graph.prototype.plotPointChart = function () {
 		// console.log("Graph - drawPoint '"+x+","+y+"':");
 		graph.asciiDrawing.drawPoint(x, y, '*'.yellow);
 	}
-	
 	this.plotChart(drawingFunction);
 }
+
+
+
+
+
+
+
 
 //Plot a chart using a drawing function.  Drawing function can take in up to three arguments ( x, y, and index )
 Graph.prototype.plotChart = function ( drawingFunction ) {
@@ -204,6 +231,7 @@ Graph.prototype.plotChart = function ( drawingFunction ) {
 		drawingFunction(x, y, ii);
 	}
 }
+
 Graph.prototype.display = function() {
 	console.log(this.toString());
 }
@@ -211,8 +239,7 @@ Graph.prototype.toString = function () {
 	return this.asciiDrawing.toString();
 }
 
-
-
+//Draw the axis
 Graph.prototype.drawAxis = function ( ) {
 	var ax = this.xAxis_origin;
 	var ax_end = this.xAxis_origin + this.xAxis_size;
